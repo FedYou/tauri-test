@@ -20,7 +20,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const version = '1.0.0'  # Pon tu versión aquí directamente
+            const version = '1.0.0';  # Definir la versión directamente aquí
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
