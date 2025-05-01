@@ -15,26 +15,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-
-      - name: Get version from package.json
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-
       - name: Create GitHub release
         id: create-release
         uses: actions/github-script@v6
         with:
           script: |
+            const version = '1.0.0'  # Pon tu versión aquí directamente
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `app-v${process.env.PACKAGE_VERSION}`,
-              name: `Desktop App v${process.env.PACKAGE_VERSION}`,
+              tag_name: `app-v${version}`,
+              name: `Desktop App v${version}`,
               body: 'Take a look at the assets to download and install this app.',
               draft: true,
               prerelease: false
