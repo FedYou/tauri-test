@@ -33,7 +33,7 @@ jobs:
             npm
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm install -g pnpm && npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
