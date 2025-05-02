@@ -39,22 +39,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-release:
-    permissions:
-      contents: write
-    runs-on: ubuntu-22.04
-    needs: build-tauri
-
-    steps:
-      - name: Publish GitHub release
-        uses: actions/github-script@v6
+      - name: Upload AppImage as artifact
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const releaseId = Number("${{ needs.create-release.outputs.release_id }}")
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: releaseId,
-              draft: false,
-              prerelease: false
-            })
+          name: appimage
+          path: src-tauri/target/release/bundle/appimage/*.AppImage
+
+      - name: Upload .deb as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: src-tauri/target/release/bundle/deb/*.deb
