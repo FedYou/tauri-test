@@ -1,55 +1,62 @@
-name: "build-and-publish"
+name: Build Tauri App
 
 on:
   push:
     tags:
-      - 'v*' # Ejecuta solo si haces push a un tag como v1.0.0
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
-  build-tauri:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
     permissions:
-      contents: write
-    runs-on: ubuntu-22.04
+      contents: write # Necesario para subir al release
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Install Node 🧰
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 16
 
-      - name: Install Rust
+      - name: Install Rust 🦀
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install system dependencies
+      - name: Install dependencies (ubuntu only) 📦
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.0-dev \
-            libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            npm
+            rpm
 
-      - name: Install frontend dependencies
-        run: npm install -g pnpm && pnpm install
+      - name: Install npm packages with pnpm 📦
+        run: npm i -g pnpm && pnpm install
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Build the app 💻
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppImage to release
+      - name: Upload release artifacts 🚀
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/bundle/appimage/*.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload .deb to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: src-tauri/target/release/bundle/deb/*.deb
+          files: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.rpm
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/macos/*.app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
