@@ -2,7 +2,8 @@ name: "build-and-publish"
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*' # Ejecuta solo si haces push a un tag como v1.0.0
 
 jobs:
   build-tauri:
@@ -33,20 +34,22 @@ jobs:
             npm
 
       - name: Install frontend dependencies
-        run: npm install -g pnpm && npm install
+        run: npm install -g pnpm && pnpm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppImage as artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload AppImage to release
+        uses: softprops/action-gh-release@v2
         with:
-          name: appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          files: src-tauri/target/release/bundle/appimage/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload .deb as artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload .deb to release
+        uses: softprops/action-gh-release@v2
         with:
-          name: deb-package
-          path: src-tauri/target/release/bundle/deb/*.deb
+          files: src-tauri/target/release/bundle/deb/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
