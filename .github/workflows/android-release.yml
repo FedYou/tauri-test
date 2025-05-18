@@ -43,28 +43,11 @@ jobs:
       - name: Accept Android licenses
         run: yes | sdkmanager --licenses
 
-      - name: Install NDK and build-tools
-        run: |
-          sdkmanager "ndk;25.2.9519653" "platforms;android-33" "build-tools;33.0.2"
-          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-
       - name: Install frontend dependencies
         run: npm i -g pnpm && pnpm install
 
       - name: Initialize Android project (if needed)
         run: pnpm tauri android init || true
-
-      - name: Ls Android project
-        run: ls -la src-tauri/gen/android && cat src-tauri/gen/android/app/build.gradle.kts
-
-      - name: Set minSdkVersion to 26 in build.gradle.kts
-        run: sed -i 's/minSdkVersion([0-9]\+)/minSdkVersion(26)/' src-tauri/gen/android/build.gradle.kts
-
-      - name: Set minSdkVersion to 26
-        run: |
-          GRADLE_FILE=$(find src-tauri/gen/android -name build.gradle | head -n 1)
-          echo "Patching $GRADLE_FILE..."
-          sed -i 's/minSdkVersion [0-9]\+/minSdkVersion 26/' "$GRADLE_FILE"
 
       - name: Build APK for ${{ matrix.target_short }}
         run: pnpm tauri android build --target ${{ matrix.target_short }}
