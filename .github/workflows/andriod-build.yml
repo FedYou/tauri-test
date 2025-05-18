@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -54,8 +57,17 @@ jobs:
       - name: Build APK for ${{ matrix.target_short }}
         run: pnpm tauri android build --target ${{ matrix.target_short }}
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - name: Rename APK for release
+        run: |
+          APP_NAME=$(node -p "require('./src-tauri/tauri.conf.json').package.productName || 'app'")
+          RAW_VERSION=${{ github.ref_name }}
+          VERSION="_${RAW_VERSION#v}_"   
+          mkdir -p apk
+          find src-tauri/gen/android -name "*.apk" -exec cp {} apk/${APP_NAME,,}-${{ matrix.target_short }}-${VERSION}.apk \;
+
+      - name: Upload APKs to GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: apk-${{ matrix.target_short }}.apk
-          path: src-tauri/gen/android/**/*.apk
+          files: apk/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
