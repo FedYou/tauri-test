@@ -91,7 +91,7 @@ jobs:
           TAURI_ANDROID_TARGET: aarch64-linux-android
         run: |
           rustup target add aarch64-linux-android
-          pnpm tauri android build
+          pnpm tauri android init && pnpm tauri android build
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
