@@ -1,0 +1,58 @@
+name: Build Tauri App Android (Multiarch)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-linux-android # arm64-v8a
+          - armv7-linux-androideabi # armeabi-v7a
+          - x86_64-linux-android # x86_64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup Rust with Android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install NDK and build-tools
+        run: |
+          sdkmanager "ndk;25.2.9519653" "platforms;android-33" "build-tools;33.0.2"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
+      - name: Install frontend dependencies
+        run: npm i -g pnpm && pnpm install
+
+      - name: Initialize Android project (if needed)
+        run: pnpm tauri android init || true
+
+      - name: Build APK for ${{ matrix.target }}
+        run: pnpm tauri android build --target ${{ matrix.target }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.target }}
+          path: src-tauri/gen/android/**/*.apk
