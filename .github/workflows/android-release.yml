@@ -1,64 +1,68 @@
-name: Build Universal Android APK
+name: Build Universal Tauri APK (Android 8+)
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   android:
-    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout 🛎️
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 🧰
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install Rust 🦀
+      - name: Setup Rust for Android
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
 
-      - name: Install Android SDK dependencies 📦
-        run: sudo apt-get update && sudo apt-get install -y openjdk-17-jdk unzip wget
-
-      - name: Set up Android SDK 🛠️
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install frontend dependencies 📦
-        run: npm i -g pnpm && pnpm i
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
 
-      - name: Add Android target to Rust
-        run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
-
-      - name: Init Tauri Android project
-        run: pnpm tauri android init --ci
-
-      - name: Set minSdk = 26 (Android 8.0)
+      - name: Install NDK and build-tools
         run: |
-          GRADLE_FILE="src-tauri/gen/android/app/build.gradle.kts"
-          sed -i 's/minSdk = [0-9]\+/minSdk = 26/' "$GRADLE_FILE"
-          sed -i 's/targetSdk = [0-9]\+/targetSdk = 34/' "$GRADLE_FILE"
+          sdkmanager "ndk;25.2.9519653" "platforms;android-33" "build-tools;33.0.2"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
 
-      - name: Build universal APK 📱
-        working-directory: src-tauri/gen/android
-        run: ./gradlew assembleRelease
+      - name: Install frontend dependencies
+        run: npm i -g pnpm && pnpm install
 
-      - name: Rename APK 🏷️
+      - name: Initialize Android project (if needed)
+        run: pnpm tauri android init || true
+
+      - name: Patch minSdkVersion to 26
         run: |
-          APP_NAME=$(node -e "console.log(require('./src-tauri/tauri.conf.json')?.tauri?.package?.productName || 'app')")
-          VERSION="_${GITHUB_REF_NAME#v}"
-          APK_PATH="src-tauri/gen/android/app/build/outputs/apk/release/app-release.apk"
-          FINAL_NAME="${APP_NAME,,}-universal${VERSION}.apk"
-          cp "$APK_PATH" "$FINAL_NAME"
-          echo "FINAL_APK=$FINAL_NAME" >> "$GITHUB_ENV"
+          FILE="src-tauri/tauri.conf.json"
+          jq '.android.minSdkVersion = 26' $FILE > tmp.$$.json && mv tmp.$$.json $FILE
 
-      - name: Upload APK to GitHub Release 🚀
-        uses: softprops/action-gh-release@v2
+      - name: Build universal APK
+        run: pnpm tauri android build --target universal
+
+      - name: Rename APK for release
+        run: |
+          APP_NAME=$(node -p "require('./src-tauri/tauri.conf.json').productName || 'app'")
+          RAW_VERSION=${{ github.ref_name }}
+          VERSION="_${RAW_VERSION#v}"
+          mkdir -p apk
+          find src-tauri/gen/android -name "*universal*.apk" -exec cp {} apk/${APP_NAME,,}-universal-${VERSION}.apk \;
+
+      - name: Upload APK to GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.FINAL_APK }}
+          files: apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
