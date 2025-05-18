@@ -57,5 +57,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: apk-${{ matrix.target_short }}
+          name: apk-${{ matrix.target_short }}.apk
           path: src-tauri/gen/android/**/*.apk
