@@ -1,4 +1,4 @@
-name: Build Universal Tauri APK (Android 8+)
+name: Build Tauri App Android (Multiarch)
 
 on:
   push:
@@ -12,6 +12,16 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_rust: aarch64-linux-android
+            target_short: aarch64
+          - target_rust: armv7-linux-androideabi
+            target_short: armv7
+          - target_rust: x86_64-linux-android
+            target_short: x86_64
 
     steps:
       - name: Checkout code
@@ -22,10 +32,10 @@ jobs:
         with:
           node-version: 18
 
-      - name: Setup Rust for Android
+      - name: Setup Rust with Android target
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+          targets: ${{ matrix.target_rust }}
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -44,23 +54,27 @@ jobs:
       - name: Initialize Android project (if needed)
         run: pnpm tauri android init || true
 
-      - name: Patch minSdkVersion to 26
-        run: |
-          FILE="src-tauri/tauri.conf.json"
-          jq '.android.minSdkVersion = 26' $FILE > tmp.$$.json && mv tmp.$$.json $FILE
+      - name: Ls Android project
+        run: ls -la src-tauri/gen/android
 
-      - name: Build universal APK
-        run: pnpm tauri android build --target universal
+      - name: Set minSdkVersion to 26
+        run: |
+          GRADLE_FILE=$(find src-tauri/gen/android -name build.gradle | head -n 1)
+          echo "Patching $GRADLE_FILE..."
+          sed -i 's/minSdkVersion [0-9]\+/minSdkVersion 26/' "$GRADLE_FILE"
+
+      - name: Build APK for ${{ matrix.target_short }}
+        run: pnpm tauri android build --target ${{ matrix.target_short }}
 
       - name: Rename APK for release
         run: |
           APP_NAME=$(node -p "require('./src-tauri/tauri.conf.json').productName || 'app'")
           RAW_VERSION=${{ github.ref_name }}
-          VERSION="_${RAW_VERSION#v}"
+          VERSION="_${RAW_VERSION#v}"   
           mkdir -p apk
-          find src-tauri/gen/android -name "*universal*.apk" -exec cp {} apk/${APP_NAME,,}-universal-${VERSION}.apk \;
+          find src-tauri/gen/android -name "*.apk" -exec cp {} apk/${APP_NAME,,}-${{ matrix.target_short }}-${VERSION}.apk \;
 
-      - name: Upload APK to GitHub Release
+      - name: Upload APKs to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: apk/*.apk
