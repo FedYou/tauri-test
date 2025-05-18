@@ -83,15 +83,23 @@ jobs:
       - name: Accept Android Licenses
         run: yes | sdkmanager --licenses
 
+      - name: Setup Android SDK & NDK
+        run: |
+          sdkmanager "ndk;25.2.9519653" "platforms;android-33" "build-tools;33.0.2"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
       - name: Install frontend deps
         run: npm i -g pnpm && pnpm install
+
+      - name: Init Android project
+        run: pnpm tauri android init
 
       - name: Build Android APK
         env:
           TAURI_ANDROID_TARGET: aarch64-linux-android
         run: |
           rustup target add aarch64-linux-android
-          pnpm tauri android init && pnpm tauri android build
+          pnpm tauri android build
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
