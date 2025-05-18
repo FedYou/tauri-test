@@ -55,7 +55,10 @@ jobs:
         run: pnpm tauri android init || true
 
       - name: Ls Android project
-        run: ls -la src-tauri/gen/android
+        run: ls -la src-tauri/gen/android && cat src-tauri/gen/android/app/build.gradle.kts
+
+      - name: Set minSdkVersion to 26 in build.gradle.kts
+        run: sed -i 's/minSdkVersion([0-9]\+)/minSdkVersion(26)/' src-tauri/gen/android/build.gradle.kts
 
       - name: Set minSdkVersion to 26
         run: |
