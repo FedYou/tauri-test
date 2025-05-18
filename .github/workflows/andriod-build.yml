@@ -59,7 +59,7 @@ jobs:
 
       - name: Rename APK for release
         run: |
-          APP_NAME=$(node -p "require('./src-tauri/tauri.conf.json').package.productName || 'app'")
+          APP_NAME=$(node -p "require('./src-tauri/tauri.conf.json').productName || 'app'")
           RAW_VERSION=${{ github.ref_name }}
           VERSION="_${RAW_VERSION#v}"   
           mkdir -p apk
