@@ -61,7 +61,7 @@ jobs:
         run: |
           APP_NAME=$(node -p "require('./src-tauri/tauri.conf.json').package.productName || 'app'")
           RAW_VERSION=${{ github.ref_name }}
-          VERSION="_${RAW_VERSION#v}_"   
+          VERSION="_${RAW_VERSION#v}"   
           mkdir -p apk
           find src-tauri/gen/android -name "*.apk" -exec cp {} apk/${APP_NAME,,}-${{ matrix.target_short }}-${VERSION}.apk \;
 
