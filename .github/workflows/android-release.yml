@@ -46,6 +46,11 @@ jobs:
       - name: Install frontend dependencies
         run: npm i -g pnpm && pnpm install
 
+      - name: Set NDK_HOME environment variable
+        run: |
+          export NDK_VERSION=$(ls $ANDROID_SDK_ROOT/ndk | sort -V | tail -n 1)
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" >> $GITHUB_ENV
+
       - name: Initialize Android project (if needed)
         run: pnpm tauri android init || true
 
